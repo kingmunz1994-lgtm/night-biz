@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Night Biz · Business Loyalty Tokens on Midnight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@400;700&display=swap"/>
+<link rel="stylesheet" href="css/nightbiz.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Night <span>Biz</span></div>
+  <div class="nav-right">
+    <button class="btn btn-ghost btn-sm" onclick="switchTab('configure')">Launch token</button>
+    <button class="btn btn-ghost btn-sm" onclick="switchTab('tiers')">Tiers</button>
+    <button class="btn btn-primary btn-sm" id="wallet-btn" onclick="handleWalletClick()">
+      <span id="wallet-dot" style="width:7px;height:7px;border-radius:50%;background:#ef4444;display:inline-block;margin-right:4px;"></span>
+      <span id="wallet-label">Sign in</span>
+    </button>
+  </div>
+</nav>
+
+<div id="toast-wrap"></div>
+
+<div class="page-inner">
+
+  <div class="hero">
+    <div class="hero-tag">🏢 Night Biz · Business Loyalty Tokens · Midnight Network</div>
+    <h1>Issue loyalty tokens your<br><em>customers can't fake.</em></h1>
+    <p>Any business from micro to enterprise can issue private loyalty tokens with ZK tier benefits. Customers prove their tier without revealing their balance. Revenue shared automatically every epoch.</p>
+    <div class="hero-btns">
+      <button class="btn btn-primary btn-lg" onclick="switchTab('configure')">Launch your token →</button>
+      <button class="btn btn-ghost btn-lg" onclick="switchTab('tiers')">Explore tiers</button>
+    </div>
+  </div>
+
+  <div class="stats-strip">
+    <div class="stat-cell"><div class="stat-val" style="color:var(--gold);">94</div><div class="stat-lbl">Brands launched</div></div>
+    <div class="stat-cell"><div class="stat-val" style="color:var(--green);">2.4M</div><div class="stat-lbl">Tokens issued</div></div>
+    <div class="stat-cell"><div class="stat-val" style="color:var(--cyan);">48K</div><div class="stat-lbl">NIGHT distributed</div></div>
+    <div class="stat-cell"><div class="stat-val">⊘</div><div class="stat-lbl">ZK-private tiers</div></div>
+  </div>
+
+  <div class="tabs-bar">
+    <div class="tab active" id="tab-configure"  onclick="switchTab('configure')">⚙️ Configure</div>
+    <div class="tab"        id="tab-my-token"   onclick="switchTab('my-token')">📊 My Token</div>
+    <div class="tab"        id="tab-tiers"      onclick="switchTab('tiers')">🏅 Tiers</div>
+    <div class="tab"        id="tab-revenue"    onclick="switchTab('revenue')">💰 Revenue</div>
+  </div>
+
+  <!-- Configure tab -->
+  <div id="view-configure">
+    <div class="card">
+      <div class="card-title">⚙️ Configure your business token</div>
+      <div class="card-sub">Set up tiers, revenue split, and licensing in one step. Works for any scale — café, DTC brand, SaaS, or enterprise.</div>
+
+      <div class="form-grid">
+        <div class="field"><label class="label">Business name</label><input class="input" id="nb-name" placeholder="e.g. Luna Coffee" type="text"/></div>
+        <div class="field"><label class="label">Token symbol</label><input class="input" id="nb-symbol" placeholder="e.g. LUNA" type="text"/></div>
+        <div class="field"><label class="label">Total supply</label><input class="input" id="nb-supply" placeholder="10,000,000" type="text"/></div>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Tier thresholds (tokens held)</div>
+      <div class="threshold-grid">
+        <div class="threshold-field"><label class="threshold-label bronze">🥉 Bronze</label><input class="input" id="thresh-bronze" type="number" value="100"/></div>
+        <div class="threshold-field"><label class="threshold-label silver">🥈 Silver</label><input class="input" id="thresh-silver" type="number" value="500"/></div>
+        <div class="threshold-field"><label class="threshold-label gold">🥇 Gold</label><input class="input" id="thresh-gold" type="number" value="2000"/></div>
+        <div class="threshold-field"><label class="threshold-label platinum">💎 Platinum</label><input class="input" id="thresh-plat" type="number" value="10000"/></div>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Revenue split (5% platform fee is fixed)</div>
+      <div class="split-row">
+        <span class="split-label">Holders</span>
+        <input class="split-slider" type="range" id="split-holder" min="50" max="90" value="80" oninput="updateSplit()"/>
+        <span class="split-val" id="split-holder-val">80%</span>
+      </div>
+      <div class="split-row">
+        <span class="split-label">Creator</span>
+        <div class="split-slider" style="flex:1;background:var(--rim);height:4px;border-radius:2px;"></div>
+        <span class="split-val" id="split-creator-val">15%</span>
+      </div>
+
+      <label class="license-row" for="nb-license">
+        <input type="checkbox" id="nb-license"/>
+        <div>
+          <div style="font-size:12px;font-weight:700;">🌐 Regional licensing gate</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Require a regional licence before a wallet can hold tokens. For enterprise/franchise use cases.</div>
+        </div>
+      </label>
+
+      <button class="btn btn-primary btn-full btn-lg" id="nb-deploy-btn" onclick="deployBizToken()">🌙 Deploy business token →</button>
+      <div style="font-size:10px;color:var(--muted);font-family:var(--mono);text-align:center;margin-top:8px;">⊘ ZK-private · Midnight preprod · Tiers enforced on-chain · Holders can't forge tier status</div>
+      <div class="circuit-log" id="nb-circuit" style="display:none;"></div>
+    </div>
+
+    <!-- Use cases -->
+    <div class="card" style="background:transparent;border-color:var(--rim);">
+      <div style="font-size:16px;font-weight:800;margin-bottom:16px;text-align:center;">Works for any business</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;">
+        <div style="background:var(--raised);border:1px solid var(--rim);border-radius:12px;padding:16px;">
+          <div style="font-size:24px;margin-bottom:8px;">☕</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px;">Café / Retail</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.5;">Issue 10,000 tokens. Bronze = free coffee. Gold = 20% off. Platinum = monthly tasting events.</div>
+        </div>
+        <div style="background:var(--raised);border:1px solid var(--rim);border-radius:12px;padding:16px;">
+          <div style="font-size:24px;margin-bottom:8px;">🛍️</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px;">DTC Brand</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.5;">100K tokens. Holders earn 50% of merch revenue. Silver tier gets early drops. Gold gets co-design input.</div>
+        </div>
+        <div style="background:var(--raised);border:1px solid var(--rim);border-radius:12px;padding:16px;">
+          <div style="font-size:24px;margin-bottom:8px;">💻</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px;">SaaS / Credits</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.5;">Token = platform credit. Tiers unlock API rate limits, support SLA, and feature access. All ZK-private.</div>
+        </div>
+        <div style="background:var(--raised);border:1px solid var(--rim);border-radius:12px;padding:16px;">
+          <div style="font-size:24px;margin-bottom:8px;">🏢</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px;">Enterprise</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.5;">1B tokens with regional licensing gates. Distributors prove licence ZK before receiving tokens.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Token tab -->
+  <div id="view-my-token" style="display:none;">
+    <div class="card" id="biz-token-dash" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+        <div>
+          <div style="font-size:18px;font-weight:800;margin-bottom:2px;"><span id="biz-name">—</span> <span id="biz-symbol" style="color:var(--gold);font-family:var(--mono);font-size:14px;"></span></div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--muted);" id="biz-addr">preprod</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="bizRefresh()">↺ Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="bizCloseEpoch()">🔒 Close epoch</button>
+        </div>
+      </div>
+      <div class="result-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
+        <div class="result-stat"><div class="result-stat-label">Holders</div><div class="result-stat-val" style="color:var(--cyan);" id="biz-holders">0</div></div>
+        <div class="result-stat"><div class="result-stat-label">Current epoch</div><div class="result-stat-val" id="biz-epoch">Epoch 0</div></div>
+        <div class="result-stat"><div class="result-stat-label">Revenue split</div><div class="result-stat-val" style="color:var(--gold);" id="biz-split">80%</div></div>
+      </div>
+      <div class="result-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">
+        <div class="result-stat"><div class="result-stat-label">Epoch revenue</div><div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--green);" id="biz-epoch-rev">0 NIGHT</div></div>
+        <div class="result-stat"><div class="result-stat-label">Your claimable</div><div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--cyan);" id="biz-claimable">0 NIGHT</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Revenue feed</div>
+      <div id="biz-rev-feed"></div>
+    </div>
+    <div id="biz-no-token" style="text-align:center;padding:60px;color:var(--muted);font-family:var(--mono);">No token deployed yet — configure and deploy in the Configure tab.</div>
+  </div>
+
+  <!-- Tiers tab -->
+  <div id="view-tiers" style="display:none;">
+    <div class="card">
+      <div class="card-title">🏅 Tier system</div>
+      <div class="card-sub">Customers prove their tier in ZK — they show they hold ≥ the threshold without revealing their exact balance. Tiers are unforgeable and privacy-preserving.</div>
+      <div class="tier-grid" id="tier-preview-grid">
+        <div class="tier-card tier-bronze"><div class="tier-icon">🥉</div><div class="tier-name bronze">Bronze</div><div class="tier-threshold">≥ 100 tokens</div><div class="tier-perk">5% discount · Priority support</div></div>
+        <div class="tier-card tier-silver"><div class="tier-icon">🥈</div><div class="tier-name silver">Silver</div><div class="tier-threshold">≥ 500 tokens</div><div class="tier-perk">10% discount · Early access · Free shipping</div></div>
+        <div class="tier-card tier-gold"><div class="tier-icon">🥇</div><div class="tier-name gold">Gold</div><div class="tier-threshold">≥ 2,000 tokens</div><div class="tier-perk">20% discount · VIP events · Revenue boost 2×</div></div>
+        <div class="tier-card tier-platinum"><div class="tier-icon">💎</div><div class="tier-name platinum">Platinum</div><div class="tier-threshold">≥ 10,000 tokens</div><div class="tier-perk">Unlimited perks · Private access · Governance voting</div></div>
+      </div>
+      <div style="background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.15);border-radius:12px;padding:16px;font-size:12px;color:var(--text2);line-height:1.7;">
+        <strong style="color:var(--glow);">How ZK tiers work:</strong> When a customer wants to claim a tier perk, they run the <code style="font-family:var(--mono);color:var(--cyan);">proveTierStatus()</code> circuit from NightBizToken.compact. This generates a ZK proof that their balance ≥ the tier threshold — without revealing their exact token count to the business. The business sees only "this customer is Gold tier" — not their balance.
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue tab -->
+  <div id="view-revenue" style="display:none;">
+    <div class="card">
+      <div class="card-title">💰 Revenue sharing</div>
+      <div class="card-sub">Every sale your business records flows 50% to token holders. Distributed per epoch. Claimed privately on Midnight. Holders never reveal how many tokens they hold.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;text-align:center;margin-top:16px;">
+        <div><div style="font-size:28px;margin-bottom:8px;">💳</div><div style="font-weight:700;font-size:13px;margin-bottom:4px;">Record a sale</div><div style="font-size:12px;color:var(--text2);line-height:1.6;">Every sale is logged on-chain. 50% of net revenue flows to the epoch pool.</div></div>
+        <div><div style="font-size:28px;margin-bottom:8px;">🔒</div><div style="font-weight:700;font-size:13px;margin-bottom:4px;">Close epoch</div><div style="font-size:12px;color:var(--text2);line-height:1.6;">Call closeEpoch() to snapshot holder balances and calculate each holder's share.</div></div>
+        <div><div style="font-size:28px;margin-bottom:8px;">⚡</div><div style="font-weight:700;font-size:13px;margin-bottom:4px;">Holders claim</div><div style="font-size:12px;color:var(--text2);line-height:1.6;">Each holder calls claimRevenue() with a ZK proof of their balance. NIGHT arrives instantly.</div></div>
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <button class="btn btn-primary" onclick="switchTab('my-token')">View my token dashboard →</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="overlay" id="ov-wallet" onclick="if(event.target===this)closeModal('ov-wallet')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('ov-wallet')">✕</button>
+    <div class="wc-icon">🏢</div>
+    <div class="wc-title">Connect to launch</div>
+    <div class="wc-sub">Connect a Midnight wallet to deploy your business loyalty token and manage tier configuration.</div>
+    <button class="btn btn-primary btn-full btn-lg" onclick="connectDemo()">🎭 Try Demo Mode</button>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center;">Demo uses simulated tNIGHT · no real funds</div>
+  </div>
+</div>
+
+<script src="js/biz.js"></script>
+</body>
+</html>

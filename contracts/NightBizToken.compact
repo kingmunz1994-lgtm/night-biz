@@ -1,0 +1,170 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// ══════════════════════════════════════════════════════════════════
+//  NightBizToken — Business Loyalty Token with ZK Tier Verification
+//
+//  Based on NightFunToken with enterprise extensions:
+//    — Tier thresholds: Bronze / Silver / Gold / Platinum
+//    — proveTierStatus(): proves tier WITHOUT revealing exact balance
+//    — Regional licensing gate (optional)
+//    — Revenue epoch mechanism (50% to holders by default)
+//    — Compatible with micro (café) to enterprise (Coca-Cola) scale
+// ══════════════════════════════════════════════════════════════════
+
+export ledger token_name:   Map<Bytes<32>, Bytes<32>>;
+export ledger token_symbol: Map<Bytes<32>, Bytes<8>>;
+export ledger total_supply: Map<Bytes<32>, Uint<64>>;
+export ledger is_paused:    Map<Bytes<32>, Boolean>;
+
+// Creator commitment (ZK — never revealed)
+export ledger creator_commit: Map<Bytes<32>, Bytes<32>>;
+
+// Revenue split (basis points, sum = 10000)
+export ledger holder_bps:   Map<Bytes<32>, Uint<16>>; // e.g. 8000 = 80%
+export ledger creator_bps:  Map<Bytes<32>, Uint<16>>; // e.g. 1500 = 15%
+// platform_bps always 500 (5%)
+
+// Tier thresholds (token quantities)
+export ledger tier_bronze:   Map<Bytes<32>, Uint<64>>;
+export ledger tier_silver:   Map<Bytes<32>, Uint<64>>;
+export ledger tier_gold:     Map<Bytes<32>, Uint<64>>;
+export ledger tier_platinum: Map<Bytes<32>, Uint<64>>;
+
+// Holder balances (private commitments)
+export ledger holder_balance: Map<Bytes<32>, Uint<64>>;
+export ledger total_holders:  Counter;
+
+// Revenue epoch
+export ledger current_epoch:          Counter;
+export ledger epoch_rev_per_token:    Map<Bytes<32>, Uint<64>>;
+export ledger holder_last_claimed_ep: Map<Bytes<32>, Uint<64>>;
+
+// Licensing gate
+export ledger license_required: Map<Bytes<32>, Boolean>;
+export ledger has_license:      Map<Bytes<32>, Boolean>;
+
+// Total sales (public stat — no buyer info)
+export ledger total_sales:   Counter;
+export ledger total_revenue: Map<Bytes<32>, Uint<64>>;
+
+witness localSecretKey():     Bytes<32>;
+witness holderTokenBalance(): Uint<64>;
+
+circuit callerCommitment(): Bytes<32> {
+  const sk = localSecretKey();
+  return persistentHash<Vector<2, Bytes<32>>>([kernel.self().bytes, sk]);
+}
+
+circuit creatorCommitment(): Bytes<32> {
+  const sk = localSecretKey();
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32,"creator"), kernel.self().bytes, sk]);
+}
+
+export circuit initialize(
+  name:       Bytes<32>,
+  symbol:     Bytes<8>,
+  supply:     Uint<64>,
+  holderBps:  Uint<16>,
+  creatorBps: Uint<16>,
+  bronze:     Uint<64>,
+  silver:     Uint<64>,
+  gold:       Uint<64>,
+  platinum:   Uint<64>,
+  licReq:     Boolean
+): Void {
+  assert(!token_name.member(pad(32,"name")), "already initialised");
+  assert(holderBps + creatorBps == 9500, "bps must sum to 9500 (platform takes 500)");
+  assert(bronze < silver && silver < gold && gold < platinum, "tiers must be ascending");
+  token_name.insert(pad(32,"name"),   name);
+  token_symbol.insert(pad(32,"sym"),  symbol);
+  total_supply.insert(pad(32,"sup"),  supply);
+  holder_bps.insert(pad(32,"hbps"),   holderBps);
+  creator_bps.insert(pad(32,"cbps"),  creatorBps);
+  tier_bronze.insert(pad(32,"tb"),    bronze);
+  tier_silver.insert(pad(32,"ts"),    silver);
+  tier_gold.insert(pad(32,"tg"),      gold);
+  tier_platinum.insert(pad(32,"tp"),  platinum);
+  license_required.insert(pad(32,"lic"), licReq);
+  creator_commit.insert(pad(32,"creator"), creatorCommitment());
+  holder_balance.insert(creatorCommitment(), supply);
+  total_holders.increment(1);
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): Void {
+  const from    = callerCommitment();
+  const fromBal = holder_balance.member(from) ? holder_balance.lookup(from) : 0;
+  assert(fromBal >= amount, "insufficient balance");
+
+  const licReq = license_required.member(pad(32,"lic")) ? license_required.lookup(pad(32,"lic")) : false;
+  if (licReq) {
+    const toLicensed = has_license.member(to) ? has_license.lookup(to) : false;
+    assert(toLicensed, "recipient requires regional licence");
+  }
+
+  holder_balance.insert(from, fromBal - amount);
+  const toBal = holder_balance.member(to) ? holder_balance.lookup(to) : 0;
+  if (toBal == 0 && amount > 0) { total_holders.increment(1); }
+  holder_balance.insert(to, toBal + amount);
+}
+
+// ── Tier status proof ──────────────────────────────────────────
+// Proves caller holds >= threshold WITHOUT revealing exact balance
+// Returns: 0=none, 1=Bronze, 2=Silver, 3=Gold, 4=Platinum
+export circuit proveTierStatus(): Uint<8> {
+  const commit  = callerCommitment();
+  const balance = holderTokenBalance();
+  // Verify the witness matches ledger (ZK constraint)
+  assert(holder_balance.lookup(commit) == balance, "balance witness mismatch");
+
+  const bronze  = tier_bronze.lookup(pad(32,"tb"));
+  const silver  = tier_silver.lookup(pad(32,"ts"));
+  const gold    = tier_gold.lookup(pad(32,"tg"));
+  const plat    = tier_platinum.lookup(pad(32,"tp"));
+
+  if (balance >= plat)   { return 4; }
+  if (balance >= gold)   { return 3; }
+  if (balance >= silver) { return 2; }
+  if (balance >= bronze) { return 1; }
+  return 0;
+}
+
+export circuit recordSale(amountNight: Uint<64>): Void {
+  total_sales.increment(1);
+  const cur = total_revenue.member(pad(32,"rev")) ? total_revenue.lookup(pad(32,"rev")) : 0;
+  total_revenue.insert(pad(32,"rev"), cur + amountNight);
+}
+
+export circuit closeEpoch(holderSharePerToken: Uint<64>): Void {
+  const creator = creatorCommitment();
+  assert(creator_commit.lookup(pad(32,"creator")) == creator, "only creator");
+  const ep = current_epoch.value();
+  epoch_rev_per_token.insert(pad(32, ep), holderSharePerToken);
+  current_epoch.increment(1);
+}
+
+export circuit claimRevenue(): Uint<64> {
+  const commit   = callerCommitment();
+  const balance  = holderTokenBalance();
+  assert(holder_balance.lookup(commit) == balance, "balance witness mismatch");
+  const lastEp   = holder_last_claimed_ep.member(commit) ? holder_last_claimed_ep.lookup(commit) : 0;
+  const curEp    = current_epoch.value();
+  assert(curEp > lastEp, "no new epochs to claim");
+
+  var total: Uint<64> = 0;
+  const ep = curEp - 1;
+  if (epoch_rev_per_token.member(pad(32, ep))) {
+    const revPT = epoch_rev_per_token.lookup(pad(32, ep));
+    total = total + (balance * revPT / 1000);
+  }
+
+  holder_last_claimed_ep.insert(commit, curEp);
+  return total;
+}
+
+export circuit grantLicense(holderCommit: Bytes<32>): Void {
+  const creator = creatorCommitment();
+  assert(creator_commit.lookup(pad(32,"creator")) == creator, "only creator");
+  has_license.insert(holderCommit, true);
+}

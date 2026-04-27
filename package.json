@@ -1,0 +1,16 @@
+{
+  "name": "night-biz",
+  "version": "0.1.0",
+  "description": "Business Loyalty Tokens on Midnight — ZK tiers, revenue sharing, licensing gates",
+  "scripts": {
+    "dev": "npx serve public -p 3008",
+    "compile": "compactc contracts/NightBizToken.compact src/nightbiz_contract/"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "^1.0.0",
+    "@midnight-ntwrk/dapp-connector-api": "^2.0.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
