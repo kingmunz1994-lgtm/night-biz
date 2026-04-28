@@ -17,6 +17,17 @@ var walletState = { connected: false, demo: false, address: null };
 var _bizData = JSON.parse(localStorage.getItem('nb_token') || 'null');
 function saveBiz() { localStorage.setItem('nb_token', JSON.stringify(_bizData)); }
 
+async function connectLace() {
+  if (typeof nightWallet === 'undefined') { connectDemo(); return; }
+  try {
+    const state = await nightWallet.connect('lace');
+    walletState = { connected: state.connected, demo: state.demo, address: state.address };
+    closeModal('ov-wallet'); updateWalletUI();
+    toast(state.demo ? '🎭 Demo mode' : '✓ Lace connected', 'success');
+    await syncBizState();
+  } catch { connectDemo(); }
+}
+
 function connectDemo() {
   walletState = { connected: true, demo: true, address: 'mn_addr_preprod1' + Math.random().toString(36).slice(2, 14) };
   closeModal('ov-wallet'); updateWalletUI();
@@ -27,6 +38,14 @@ function handleWalletClick() {
   if (walletState.connected) {
     if (confirm('Disconnect?')) { walletState = { connected: false, demo: false, address: null }; updateWalletUI(); }
   } else { openModal('ov-wallet'); }
+}
+
+async function syncBizState() {
+  if (!walletState.address) return;
+  try {
+    const r = await fetch(NB_API + `/api/nightbiz/state/${encodeURIComponent(walletState.address)}`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) { const data = await r.json(); _bizData = data; saveBiz(); }
+  } catch { /* use local state */ }
 }
 
 function updateWalletUI() {
