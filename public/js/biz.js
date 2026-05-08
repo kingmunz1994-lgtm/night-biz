@@ -1,5 +1,18 @@
 // ── Night Biz — Business Loyalty Tokens ───────────────────────
 
+const NIGHT_ID_API = 'https://night-markets-94-production.up.railway.app';
+async function recordAction(points) {
+  const addr = walletState?.address;
+  if (!addr) return;
+  try {
+    await fetch(`${NIGHT_ID_API}/api/nightid/record-action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ holderAddress: addr, appId: 'night-biz', points }),
+    });
+  } catch (_) {}
+}
+
 var NB_API = 'http://127.0.0.1:3001';
 var _apiReady = null;
 async function apiCheck() {
@@ -109,6 +122,7 @@ async function deployBizToken() {
       try { apiPost('/api/nightfun/launch-curve', { tokenAddress: addr, initialTokens: 1000000, privacyEnabled: true }); } catch {}
       if (btn) { btn.disabled = false; btn.textContent = '🌙 Deploy business token →'; }
       toast(`✓ $${symbol} deployed — tier system live`, 'success');
+      recordAction(10);
       renderTokenDash();
       switchTab('my-token');
       return;
