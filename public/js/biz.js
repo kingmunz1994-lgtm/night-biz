@@ -171,6 +171,7 @@ async function bizCloseEpoch() {
   _bizData.epochRev = 0;
   saveBiz(); renderTokenDash();
   toast('✓ Epoch closed — revenue distributed to holders', 'success');
+  recordAction(15);
 }
 
 async function bizRefresh() {
